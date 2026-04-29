@@ -1,0 +1,8 @@
+﻿@model Appointment
+<h2>Cảnh báo: Trùng lịch hẹn!</h2>
+<form asp-action="Replace" method="post">
+    <!-- Nút Replace() -->
+    <button type="submit" class="btn btn-danger">Ghi đè (Replace)</button>
+</form>
+<!-- Nút Choose other time -->
+<a href="/Appointment/Create" class="btn btn-secondary">Chọn thời gian khác</a>

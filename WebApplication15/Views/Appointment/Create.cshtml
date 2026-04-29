@@ -1,0 +1,7 @@
+﻿@model Appointment
+<form asp-action="Create">
+    <input asp-for="Name" placeholder="Tên cuộc hẹn" />
+    <input asp-for="StartTime" type="datetime-local" />
+    <input asp-for="EndTime" type="datetime-local" />
+    <button type="submit">Add Appointment</button>
+</form>
