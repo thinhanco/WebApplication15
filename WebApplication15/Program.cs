@@ -3,6 +3,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+// Đăng ký Singleton để mô phỏng Database in-memory, đảm bảo dữ liệu không mất đi giữa các request
+builder.Services.AddSingleton<WebApplication15.Services.AppointmentService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -22,8 +25,7 @@ app.MapStaticAssets();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
+    pattern: "{controller=Appointment}/{action=Index}/{id?}")
     .WithStaticAssets();
-
 
 app.Run();

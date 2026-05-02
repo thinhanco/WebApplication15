@@ -1,7 +1,44 @@
-﻿@model Appointment
-<form asp-action="Create">
-    <input asp-for="Name" placeholder="Tên cuộc hẹn" />
-    <input asp-for="StartTime" type="datetime-local" />
-    <input asp-for="EndTime" type="datetime-local" />
-    <button type="submit">Add Appointment</button>
-</form>
+@model WebApplication15.Models.Appointment
+
+@{
+    ViewData["Title"] = "Thêm cuộc hẹn";
+}
+
+<div class="google-card">
+    <h2 style="font-family: 'Google Sans', sans-serif; font-size: 22px; font-weight: 400; margin-bottom: 24px; color: #202124;">Thêm cuộc hẹn mới</h2>
+    
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" style="font-size: 14px; border-radius: 4px;">
+            @Html.ValidationSummary(false, "", new { @class = "text-danger mb-0" })
+        </div>
+    }
+
+    <form asp-action="Create" method="post">
+        <div>
+            <label class="form-label" asp-for="Name">Tiêu đề</label>
+            <input class="google-input" asp-for="Name" placeholder="Thêm tiêu đề" required autofocus />
+        </div>
+        
+        <div>
+            <label class="form-label" asp-for="Location">Địa điểm</label>
+            <input class="google-input" asp-for="Location" placeholder="Thêm địa điểm" />
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label" asp-for="StartTime">Bắt đầu</label>
+                <input class="google-input" asp-for="StartTime" type="datetime-local" required />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" asp-for="EndTime">Kết thúc</label>
+                <input class="google-input" asp-for="EndTime" type="datetime-local" required />
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-4 gap-2">
+            <a asp-action="Index" class="btn-outline">Hủy</a>
+            <button type="submit" class="btn-google">Lưu</button>
+        </div>
+    </form>
+</div>

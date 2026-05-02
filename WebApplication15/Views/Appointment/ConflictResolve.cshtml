@@ -1,8 +1,30 @@
-﻿@model Appointment
-<h2>Cảnh báo: Trùng lịch hẹn!</h2>
-<form asp-action="Replace" method="post">
-    <!-- Nút Replace() -->
-    <button type="submit" class="btn btn-danger">Ghi đè (Replace)</button>
-</form>
-<!-- Nút Choose other time -->
-<a href="/Appointment/Create" class="btn btn-secondary">Chọn thời gian khác</a>
+@model WebApplication15.Models.Appointment
+
+@{
+    ViewData["Title"] = "Xung đột lịch";
+    var newApp = ViewBag.NewAppointment as WebApplication15.Models.Appointment;
+}
+
+<div class="google-card border-top border-4 border-danger">
+    <div class="d-flex align-items-center mb-3">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="#d93025" class="me-2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"></path></svg>
+        <h2 style="font-family: 'Google Sans', sans-serif; font-size: 20px; font-weight: 500; margin: 0; color: #d93025;">Trùng lịch hẹn!</h2>
+    </div>
+    
+    <p style="font-size: 15px; color: #3c4043; margin-bottom: 20px;">
+        Khung giờ từ <strong>@newApp?.StartTime.ToString("HH:mm")</strong> đến <strong>@newApp?.EndTime.ToString("HH:mm")</strong> 
+        đã bị trùng với cuộc hẹn: <strong>@Model.Name</strong>. Bạn muốn làm gì?
+    </p>
+
+    <form asp-action="Replace" method="post" class="d-flex justify-content-end gap-2 mt-4">
+        <input type="hidden" name="oldAppId" value="@Model.Id" />
+        <!-- Các thuộc tính của newApp -->
+        <input type="hidden" name="Name" value="@newApp?.Name" />
+        <input type="hidden" name="Location" value="@newApp?.Location" />
+        <input type="hidden" name="StartTime" value="@newApp?.StartTime.ToString("O")" />
+        <input type="hidden" name="EndTime" value="@newApp?.EndTime.ToString("O")" />
+
+        <a href="/Appointment/Create" class="btn-outline">Chọn giờ khác</a>
+        <button type="submit" class="btn-google google-btn-danger">Ghi đè (Replace)</button>
+    </form>
+</div>
