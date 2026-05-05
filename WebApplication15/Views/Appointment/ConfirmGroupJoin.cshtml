@@ -1,30 +1,158 @@
 @model WebApplication15.Models.GroupMeeting
-
 @{
-    ViewData["Title"] = "Tham gia họp nhóm";
-    var proposedApp = ViewBag.ProposedAppointment as WebApplication15.Models.Appointment;
+    var proposed = ViewBag.ProposedAppointment as WebApplication15.Models.Appointment;
 }
 
-<div class="google-card border-top border-4 border-primary">
-    <div class="d-flex align-items-center mb-3">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="#1a73e8" class="me-2"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"></path></svg>
-        <h2 style="font-family: 'Google Sans', sans-serif; font-size: 20px; font-weight: 500; margin: 0; color: #1a73e8;">Họp nhóm đã tồn tại</h2>
-    </div>
-    
-    <p style="font-size: 15px; color: #3c4043; margin-bottom: 20px;">
-        Chúng tôi tìm thấy một cuộc họp nhóm <strong>"@Model.Name"</strong> đang diễn ra vào cùng thời điểm bạn vừa chọn 
-        (@proposedApp?.StartTime.ToString("HH:mm") - @proposedApp?.EndTime.ToString("HH:mm")).
-        <br/><br/>
-        Bạn có muốn tham gia nhóm này thay vì tạo cuộc hẹn mới không?
-    </p>
+<style>
+    body {
+        font-family: 'Roboto', sans-serif;
+        background-color: #f8f9fa;
+    }
 
-    <div class="d-flex justify-content-end gap-2 mt-4">
-        <!-- Nút từ chối -> Quay lại tạo bình thường hoặc hủy -->
-        <a href="/Appointment/Create" class="btn-outline">Không, quay lại</a>
-        
-        <form asp-action="JoinGroup" method="post">
-            <input type="hidden" name="meetingId" value="@Model.Id" />
-            <button type="submit" class="btn-google">Đồng ý tham gia</button>
-        </form>
+    .confirm-card {
+        max-width: 650px;
+        margin: 80px auto;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        background: white;
+    }
+
+    .confirm-header {
+        background-color: #007bff; /* Màu xanh đậm chuyên nghiệp */
+        color: white;
+        padding: 20px 24px;
+        border-radius: 8px 8px 0 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+        .confirm-header h4 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 500;
+            font-family: 'Google Sans', sans-serif;
+        }
+
+    .confirm-body {
+        padding: 32px;
+    }
+
+    .info-box {
+        background-color: #f1f3f4;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+
+    .meeting-name {
+        font-size: 20px;
+        font-weight: 500;
+        color: #202124;
+        margin-bottom: 8px;
+    }
+
+    .meeting-time {
+        font-size: 14px;
+        color: #5f6368;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .badge-participants {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 4px 12px;
+        background-color: #e6f4ea;
+        color: #1e8e3e;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .prompt-text {
+        font-size: 14px;
+        color: #3c4043;
+        text-align: center;
+        margin-top: 24px;
+    }
+
+    .btn-group-custom {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin-top: 24px;
+    }
+
+    .btn-main {
+        border-radius: 4px;
+        padding: 10px 24px;
+        font-size: 14px;
+        font-weight: 500;
+        border: none;
+        transition: background 0.2s;
+    }
+
+    .btn-join {
+        background-color: #1a73e8;
+        color: white;
+    }
+
+        .btn-join:hover {
+            background-color: #1557b0;
+        }
+
+    .btn-cancel {
+        background-color: transparent;
+        color: #1a73e8;
+        border: 1px solid #dadce0;
+    }
+
+        .btn-cancel:hover {
+            background-color: #f6fafe;
+        }
+</style>
+
+<div class="container">
+    <div class="confirm-card">
+        <div class="confirm-header">
+            @* Đã sửa lỗi thẻ i *@
+            <i class="bi bi-info-circle-fill" style="font-size: 24px;"></i>
+            <h4>Phát hiện cuộc họp nhóm trùng khớp</h4>
+        </div>
+        <div class="confirm-body">
+            <p style="font-size: 15px; color: #3c4043;">Hệ thống tìm thấy một cuộc họp nhóm hiện có khớp hoàn toàn với thông tin bạn vừa nhập:</p>
+            
+            <div class="info-box">
+                <div class="meeting-name">@Model.Name</div>
+                <div class="meeting-time">
+                    <i class="bi bi-calendar3"></i>
+                    @Model.StartTime.ToString("dd/MM/yyyy") | @Model.StartTime.ToString("HH:mm") - @Model.EndTime.ToString("HH:mm")
+                </div>
+                <div class="badge-participants">
+                    <i class="bi bi-people-fill"></i> @(Model.Participants?.Count ?? 0) người đã tham gia
+                </div>
+            </div>
+
+            <p class="prompt-text">Bạn có muốn tham gia vào cuộc họp nhóm này không?</p>
+            
+            <div class="btn-group-custom">
+                <!-- Nút tham gia nhóm -->
+                <form asp-action="JoinGroup" method="post">
+                    <input type="hidden" name="meetingId" value="@Model.Id" />
+                    <button type="submit" class="btn-main btn-join">Vâng, cho tôi tham gia nhóm</button>
+                </form>
+
+                <!-- Nút Hủy bỏ quay về trang chủ -->
+                <a asp-action="Index" class="btn-main btn-cancel text-decoration-none text-center">
+                    Hủy bỏ
+                </a>
+            </div>
+        </div>
     </div>
 </div>
+
+@* Đảm bảo Bootstrap Icons hoạt động *@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
