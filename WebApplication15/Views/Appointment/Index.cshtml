@@ -1,7 +1,10 @@
 @model IEnumerable<WebApplication15.Models.Appointment>
+@* Inject Service để lấy danh sách họp nhóm *@
+@inject WebApplication15.Services.AppointmentService _service
 
 @{
     ViewData["Title"] = "Lịch biểu";
+    var groupMeetings = _service.GetAllGroupMeetings(); // Lấy dữ liệu từ Service (bao gồm dữ liệu Seed)
 }
 
 <style>
@@ -10,6 +13,7 @@
         border-radius: 8px;
         box-shadow: 0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
         overflow: hidden;
+        margin-bottom: 30px;
     }
     .schedule-header {
         background: #f1f3f4;
@@ -18,6 +22,9 @@
         font-size: 14px;
         color: #5f6368;
         border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     .schedule-row {
         display: flex;
@@ -26,59 +33,23 @@
         transition: background-color 0.2s;
         align-items: center;
     }
-    .schedule-row:hover {
-        background-color: #f8f9fa;
-    }
-    .schedule-row:last-child {
-        border-bottom: none;
-    }
-    .time-col {
-        width: 150px;
-        color: #5f6368;
-        font-size: 14px;
-        font-weight: 500;
-    }
-    .event-col {
-        flex: 1;
-        display: flex;
-        align-items: center;
-    }
-    .event-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background-color: #039be5;
-        margin-right: 12px;
-    }
-    .event-details {
-        display: flex;
-        flex-direction: column;
-    }
-    .event-title {
-        font-size: 15px;
-        color: #3c4043;
-        font-weight: 500;
-        margin-bottom: 2px;
-    }
-    .event-location {
-        font-size: 13px;
-        color: #5f6368;
-    }
-    .empty-state {
-        padding: 40px;
-        text-align: center;
-        color: #5f6368;
-    }
+    .schedule-row:hover { background-color: #f8f9fa; }
+    .time-col { width: 150px; color: #5f6368; font-size: 14px; font-weight: 500; }
+    .event-col { flex: 1; display: flex; align-items: center; }
+    .event-dot { width: 12px; height: 12px; border-radius: 50%; background-color: #039be5; margin-right: 12px; }
+    .dot-group { background-color: #34a853; } /* Màu xanh lá cho họp nhóm */
+    .event-details { display: flex; flex-direction: column; }
+    .event-title { font-size: 15px; color: #3c4043; font-weight: 500; margin-bottom: 2px; }
+    .empty-state { padding: 40px; text-align: center; color: #5f6368; }
 </style>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="mb-4">
     <h2 style="font-family: 'Google Sans', sans-serif; font-size: 28px; color: #3c4043; font-weight: 400; margin: 0;">Lịch biểu của bạn</h2>
 </div>
 
+<!-- PHẦN 1: LỊCH CÁ NHÂN -->
 <div class="schedule-view">
-    <div class="schedule-header">
-        Sắp tới
-    </div>
+    <div class="schedule-header">LỊCH CÁ NHÂN SẮP TỚI</div>
     
     @if (Model != null && Model.Any())
     {
@@ -93,13 +64,6 @@
                     <div class="event-dot"></div>
                     <div class="event-details">
                         <div class="event-title">@appt.Name</div>
-                        @if (!string.IsNullOrEmpty(appt.Location))
-                        {
-                            <div class="event-location">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="#5f6368" style="vertical-align: text-bottom;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"></path></svg>
-                                @appt.Location
-                            </div>
-                        }
                     </div>
                 </div>
             </div>
@@ -107,10 +71,43 @@
     }
     else
     {
-        <div class="empty-state">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="#dadce0" class="mb-3"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"></path></svg>
-            <h4>Không có lịch hẹn nào sắp tới</h4>
-            <p>Hãy tạo một cuộc hẹn mới để bắt đầu lên lịch cho công việc của bạn.</p>
-        </div>
+        <div class="empty-state">Chưa có lịch cá nhân nào.</div>
     }
 </div>
+
+<!-- PHẦN 2: CUỘC HỌP NHÓM -->
+<div class="schedule-view">
+    <div class="schedule-header" style="color: #1e8e3e;">CUỘC HỌP NHÓM ĐANG DIỄN RA</div>
+    
+    @if (groupMeetings != null && groupMeetings.Any())
+    {
+        foreach (var g in groupMeetings)
+        {
+            <div class="schedule-row">
+                <div class="time-col">
+                    <div>@g.StartTime.ToString("dd/MM/yyyy")</div>
+                    <div style="font-size: 13px; color: #70757a;">@g.StartTime.ToString("HH:mm") - @g.EndTime.ToString("HH:mm")</div>
+                </div>
+                <div class="event-col">
+                    <div class="event-dot dot-group"></div>
+                    <div class="event-details">
+                        <div class="event-title">@g.Name</div>
+                        <div style="font-size: 12px; color: #1e8e3e;">
+                             @(g.Participants?.Count ?? 0) người tham gia
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <form asp-action="JoinGroup" method="post">
+                        <input type="hidden" name="meetingId" value="@g.Id" />
+                        <button type="submit" class="btn btn-sm btn-outline-success" style="border-radius: 15px;">Tham gia</button>
+                    </form>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="empty-state">Không có cuộc họp nhóm nào.</div>
+    }
+</div>a
