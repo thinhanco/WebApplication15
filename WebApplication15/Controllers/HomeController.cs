@@ -4,6 +4,7 @@ using WebApplication15.Models;
 
 namespace WebApplication15.Controllers
 {
+    // Controller/HomeController.cs
     public class HomeController : Controller
     {
         public IActionResult Index()
