@@ -57,6 +57,18 @@ namespace WebApplication15.Services
             AddAppointment(newApp);
         }
 
+        // Phương thức thêm Reminder vào Appointment, tương ứng với "addReminderToList(reminderInfo)" trong Sequence Diagram
+        public bool AddReminderToAppointment(int appointmentId, Reminder reminder)
+        {
+            var appointment = _appointments.FirstOrDefault(a => a.Id == appointmentId);
+            if (appointment != null)
+            {
+                appointment.AddReminder(reminder);
+                return true;
+            }
+            return false;
+        }
+
         public void DeleteOldAppointment(int oldAppId)
         {
             // Xóa phần tử khỏi ConcurrentBag hơi phức tạp một chút do ConcurrentBag tối ưu cho việc thêm

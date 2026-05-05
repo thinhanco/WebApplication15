@@ -36,9 +36,24 @@
             </div>
         </div>
 
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <label class="form-label">Nhắc nhở</label>
+                <select class="google-input" name="reminderOffsetMinutes">
+                    <option value="0">Không nhắc</option>
+                    <option value="5">Trước 5 phút</option>
+                    <option value="10">Trước 10 phút</option>
+                    <option value="15">Trước 15 phút</option>
+                    <option value="30">Trước 30 phút</option>
+                    <option value="60">Trước 1 giờ</option>
+                    <option value="1440">Trước 1 ngày</option>
+                </select>
+            </div>
+        </div>
+
         <div class="d-flex justify-content-end mt-4 gap-2">
-            <a asp-action="Index" class="btn-outline">Hủy</a>
-            <button type="submit" class="btn-google">Lưu</button>
+            <a asp-action="Index" class="btn-outline" style="text-decoration: none; padding: 10px 24px; border-radius: 4px; border: 1px solid #dadce0; color: #1a73e8;">Hủy</a>
+            <button type="submit" class="btn-google" style="background-color: #1a73e8; color: white; border: none; padding: 10px 24px; border-radius: 4px;">Lưu</button>
         </div>
     </form>
 </div>

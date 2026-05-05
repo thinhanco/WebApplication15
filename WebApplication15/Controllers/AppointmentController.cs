@@ -20,9 +20,21 @@ namespace WebApplication15.Controllers
         public IActionResult Create() => View();
 
         [HttpPost]
-        public IActionResult Create(Appointment model)
+        public IActionResult Create(Appointment model, int reminderOffsetMinutes)
         {
-            // --- 1. Khối [alt: invalid information] ---
+            // Bỏ qua lỗi validate của Reminders vì ta sẽ tự tạo
+            ModelState.Remove("Reminders");
+
+            // Tạo Reminder nếu người dùng chọn (offset > 0)
+            model.Reminders = new List<Reminder>();
+            if (reminderOffsetMinutes > 0)
+            {
+                model.Reminders.Add(new Reminder
+                {
+                    ReminderTime = model.StartTime.AddMinutes(-reminderOffsetMinutes),
+                    Message = $"Sắp diễn ra cuộc hẹn: {model.Name}"
+                });
+            }
             if (string.IsNullOrEmpty(model.Name) || (model.EndTime <= model.StartTime))
             {
                 ModelState.AddModelError("", "Thông tin không hợp lệ.");
@@ -74,7 +86,7 @@ namespace WebApplication15.Controllers
         public IActionResult JoinGroup(int meetingId)
         {
             // 1. Lấy thông tin user (giả lập hoặc từ Identity)
-            var currentUser = User.Identity.Name ?? "user@example.com";
+            var currentUser = User.Identity?.Name ?? $"Guest-{Guid.NewGuid().ToString().Substring(0, 5)}";
 
             // 2. Gọi service xử lý logic nghiệp vụ
             bool success = _service.AddParticipantToGroup(meetingId, currentUser);
