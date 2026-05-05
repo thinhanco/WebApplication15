@@ -35,13 +35,14 @@ namespace WebApplication15.Services
         }
 
         // check appointment() - Tìm cuộc họp nhóm trùng tên và thời lượng
+        // Services/AppointmentService.cs
         public GroupMeeting FindMatchingGroupMeeting(string name, DateTime start, DateTime end)
         {
             var duration = end - start;
-            // Tìm cuộc họp nhóm trùng tên và thời lượng
-            return _groupMeetings.FirstOrDefault(g => 
-                g.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && 
-                (g.EndTime - g.StartTime) == duration);
+            return _groupMeetings.FirstOrDefault(g =>
+                g.Name.Equals(name, StringComparison.OrdinalIgnoreCase) &&
+                g.StartTime == start && // Khớp chính xác giờ bắt đầu
+                (g.EndTime - g.StartTime) == duration); // Khớp độ dài cuộc họp
         }
 
         public void AddAppointment(Appointment app) 
@@ -77,7 +78,10 @@ namespace WebApplication15.Services
                 foreach (var item in temp) _appointments.Add(item);
             }
         }
-
+        public IEnumerable<GroupMeeting> GetAllGroupMeetings()
+        {
+            return _groupMeetings.ToList();
+        }
         public bool AddParticipantToGroup(int meetingId, string user) 
         {
             var meeting = _groupMeetings.FirstOrDefault(m => m.Id == meetingId);
