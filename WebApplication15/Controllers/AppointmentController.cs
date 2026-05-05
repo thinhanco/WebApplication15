@@ -4,6 +4,15 @@ using WebApplication15.Services;
 
 namespace WebApplication15.Controllers
 {
+    /// <summary>
+    /// Handles all HTTP requests related to calendar appointments.
+    ///
+    /// The POST Create action enforces the exact sequence mandated by the Use Case:
+    ///   1. Validate input (empty name / negative duration)
+    ///   2. Check for a matching group meeting (same name + duration)
+    ///   3. Check for a personal time conflict
+    ///   4. Add reminders → Save appointment
+    /// </summary>
     public class AppointmentController : Controller
     {
         private readonly AppointmentService _service;
@@ -13,80 +22,173 @@ namespace WebApplication15.Controllers
             _service = service;
         }
 
-        [HttpGet]
-        public IActionResult Index() => View(_service.GetAllAppointments());
+        // ─────────────────────────────────────────────────────────────────────────
+        // INDEX — Show all appointments and group meetings
+        // ─────────────────────────────────────────────────────────────────────────
 
         [HttpGet]
-        public IActionResult Create() => View();
+        public IActionResult Index()
+            => View(_service.GetAllAppointments());
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // CREATE — Show the "Add Appointment" form
+        // Use Case: "The UI notices which part of the calendar is active and pops
+        //            up an Add Appointment window for that date and time."
+        // ─────────────────────────────────────────────────────────────────────────
+
+        [HttpGet]
+        public IActionResult Create(DateTime? prefillDate)
+        {
+            // Pre-fill start/end times from the calendar cell the user clicked (optional).
+            var model = new Appointment
+            {
+                StartTime = prefillDate ?? DateTime.Today.AddHours(9),
+                EndTime   = prefillDate?.AddHours(1) ?? DateTime.Today.AddHours(10)
+            };
+            return View(model);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // CREATE POST — Core use-case logic
+        //
+        // Sequence:
+        //   [alt: invalid information]  → return form with errors
+        //   [alt: duplicate info]       → ask user to join group meeting
+        //   [alt: time conflict]        → ask user to choose other time or replace
+        //   [no conflict]               → addReminder() → recordAppointment() → redirect
+        // ─────────────────────────────────────────────────────────────────────────
 
         [HttpPost]
-        public IActionResult Create(Appointment model)
+        [ValidateAntiForgeryToken]
+        public IActionResult Create(Appointment model, List<int> selectedReminders)
         {
-            // --- 1. Khối [alt: invalid information] ---
-            if (string.IsNullOrEmpty(model.Name) || (model.EndTime <= model.StartTime))
+            // ── STEP 1 · Validate ────────────────────────────────────────────────
+            // Data Annotations on the model handle [Required], [StringLength].
+            // IValidatableObject.Validate() handles EndTime <= StartTime.
+            // Use Case: "The UI will prevent the user from entering an appointment
+            //            that has invalid information, such as an empty name or
+            //            negative duration."
+            if (!ModelState.IsValid)
             {
-                ModelState.AddModelError("", "Thông tin không hợp lệ.");
+                // [alt: invalid information] — return to form
                 return View(model);
             }
 
-            // --- 2. Nhánh [No conflict] -> Check time() TRƯỚC ---
-            // Truy cập vào Calendar (Service) để kiểm tra xung đột cá nhân
-            var conflict = _service.CheckConflict(model.StartTime, model.EndTime);
-            if (conflict != null)
-            {
-                // Khối [alt: time conflict] 
-                // Trả về View để User chọn "Choose other time or replace"
-                ViewBag.NewAppointment = model;
-                return View("ConflictResolve", conflict);
-            }
+            // ── STEP 2 · Check for matching group meeting ────────────────────────
+            // Use Case: "If the user enters an appointment with the same name and
+            //            duration as an existing group meeting, the calendar asks
+            //            the user whether he/she intended to join that group meeting."
+            //
+            // Checks: Name (case-insensitive) AND Duration are identical.
+            var matchingGroup = _service.FindMatchingGroupMeeting(
+                model.Name, model.StartTime, model.EndTime);
 
-            // --- 3. Nhánh [No conflict] (Cá nhân rảnh) -> check appointment() ---
-            // (Thiết kế mới): Truy cập trực tiếp vào danh sách Group Meeting để kiểm tra trùng
-            var groupMeeting = _service.FindMatchingGroupMeeting(model.Name, model.StartTime, model.EndTime);
-            if (groupMeeting != null)
+            if (matchingGroup != null)
             {
-                // Khối [alt: duplicate information]
-                // Trả về dữ liệu existed appointment (GroupMeeting)
+                // [alt: duplicate information] — ask whether to join the group meeting
                 ViewBag.ProposedAppointment = model;
-                return View("ConfirmGroupJoin", groupMeeting);
+                return View("ConfirmGroupJoin", matchingGroup);
             }
 
-            // --- 4. Khối [alt: No conflict] cuối cùng ---
+            // ── STEP 3 · Check for personal time conflict ────────────────────────
+            // Use Case: "If the user already has an appointment at that time, the
+            //            user is shown a warning message and asked to choose an
+            //            available time or replace the previous appointment."
+            var conflictingAppointment = _service.CheckTimeConflict(
+                model.StartTime, model.EndTime);
+
+            if (conflictingAppointment != null)
+            {
+                // [alt: time conflict] — show warning; offer two branches:
+                //   • "Choose other time"  → link back to Create (GET)
+                //   • "Replace"            → POST to Replace action below
+                ViewBag.NewAppointment = model;
+                return View("ConflictResolve", conflictingAppointment);
+            }
+
+            // ── STEP 4 · Attach reminders ────────────────────────────────────────
+            // Use Case: "Any reminder selected by the user is added to the list of
+            //            reminders."
+            // selectedReminders contains the MinutesBefore values chosen in the form.
+            if (selectedReminders != null && selectedReminders.Count > 0)
+            {
+                foreach (var minutes in selectedReminders)
+                {
+                    model.Reminders.Add(new Reminder { MinutesBefore = minutes });
+                }
+            }
+
+            // ── STEP 5 · Record the appointment ─────────────────────────────────
+            // Use Case: "The calendar records the new appointment in the user's
+            //            list of appointments."
             _service.AddAppointment(model);
-            TempData["Success"] = "Add calendar successfully";
+
+            TempData["Success"] = $"Appointment \"{model.Name}\" has been successfully added.";
             return RedirectToAction(nameof(Index));
         }
 
-        // Action xử lý nút "Replace" từ trang ConflictResolve
+        // ─────────────────────────────────────────────────────────────────────────
+        // REPLACE — User chose to overwrite the conflicting appointment
+        // Use Case: "replace the previous appointment"
+        // ─────────────────────────────────────────────────────────────────────────
+
         [HttpPost]
-        public IActionResult Replace(int oldAppId, Appointment newApp)
+        [ValidateAntiForgeryToken]
+        public IActionResult Replace(int oldAppointmentId, Appointment newAppointment,
+                                     List<int> selectedReminders)
         {
-            // Nhánh [replace]: Xóa cái cũ, thêm cái mới
-            _service.DeleteOldAppointment(oldAppId);
-            _service.AddAppointment(newApp);
+            // Re-attach reminders chosen before the conflict screen was shown.
+            if (selectedReminders != null)
+            {
+                foreach (var minutes in selectedReminders)
+                    newAppointment.Reminders.Add(new Reminder { MinutesBefore = minutes });
+            }
 
+            bool replaced = _service.ReplaceAppointment(oldAppointmentId, newAppointment);
+
+            if (!replaced)
+            {
+                TempData["Error"] = "Could not replace the appointment. It may have already been removed.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            TempData["Success"] = $"Appointment replaced with \"{newAppointment.Name}\" successfully.";
             return RedirectToAction(nameof(Index));
         }
 
-        // Action xử lý nút "Confirm" từ trang ConfirmGroupJoin
-       
+        // ─────────────────────────────────────────────────────────────────────────
+        // CHOOSE OTHER TIME — User chose to pick a different slot
+        // Use Case: "choose an available time" — simply returns to the Create form,
+        // pre-filled with the data the user already entered.
+        // ─────────────────────────────────────────────────────────────────────────
+
         [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ChooseOtherTime(Appointment proposedAppointment)
+        {
+            // Return to the Create form with the user's data still populated so
+            // they only need to change the conflicting time fields.
+            ModelState.Clear();  // Clear validation state so no stale errors are shown
+            return View("Create", proposedAppointment);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // JOIN GROUP — User confirmed they want to join the matching group meeting
+        // Use Case: "the user is added to that group meeting's list of participants."
+        // ─────────────────────────────────────────────────────────────────────────
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult JoinGroup(int meetingId)
         {
-            // 1. Lấy thông tin user (giả lập hoặc từ Identity)
-            var currentUser = User.Identity.Name ?? "user@example.com";
+            // Identify the current user (use Identity username, fall back to placeholder)
+            var currentUser = User.Identity?.Name ?? "guest@example.com";
 
-            // 2. Gọi service xử lý logic nghiệp vụ
-            bool success = _service.AddParticipantToGroup(meetingId, currentUser);
+            bool success = _service.AddParticipantToGroupMeeting(meetingId, currentUser);
 
-            if (success)
-            {
-                TempData["Success"] = "Bạn đã tham gia cuộc họp nhóm thành công!";
-            }
-            else
-            {
-                TempData["Error"] = "Không thể tham gia cuộc họp nhóm này.";
-            }
+            TempData[success ? "Success" : "Error"] = success
+                ? "You have successfully joined the group meeting."
+                : "Could not join the group meeting. It may no longer exist.";
 
             return RedirectToAction(nameof(Index));
         }

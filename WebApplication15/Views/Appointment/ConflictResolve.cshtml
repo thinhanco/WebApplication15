@@ -1,30 +1,65 @@
 @model WebApplication15.Models.Appointment
 
 @{
-    ViewData["Title"] = "Xung đột lịch";
-    var newApp = ViewBag.NewAppointment as WebApplication15.Models.Appointment;
+    ViewData["Title"] = "Time Conflict";
+    // The appointment the user is trying to create
+    var proposed = ViewBag.NewAppointment as WebApplication15.Models.Appointment;
+    // Model = the existing appointment that conflicts
 }
 
 <div class="google-card border-top border-4 border-danger">
     <div class="d-flex align-items-center mb-3">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="#d93025" class="me-2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"></path></svg>
-        <h2 style="font-family: 'Google Sans', sans-serif; font-size: 20px; font-weight: 500; margin: 0; color: #d93025;">Trùng lịch hẹn!</h2>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="#d93025" class="me-2">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
+                     10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+        </svg>
+        <h2 style="font-family:'Google Sans',sans-serif;font-size:20px;font-weight:500;margin:0;color:#d93025;">
+            Time Conflict Detected!
+        </h2>
     </div>
-    
-    <p style="font-size: 15px; color: #3c4043; margin-bottom: 20px;">
-        Khung giờ từ <strong>@newApp?.StartTime.ToString("HH:mm")</strong> đến <strong>@newApp?.EndTime.ToString("HH:mm")</strong> 
-        đã bị trùng với cuộc hẹn: <strong>@Model.Name</strong>. Bạn muốn làm gì?
+
+    <p style="font-size:15px;color:#3c4043;margin-bottom:20px;">
+        The time slot <strong>@proposed?.StartTime.ToString("HH:mm")</strong>
+        &ndash; <strong>@proposed?.EndTime.ToString("HH:mm")</strong>
+        on <strong>@proposed?.StartTime.ToString("dd/MM/yyyy")</strong>
+        conflicts with an existing appointment:
+        <strong>&#8220;@Model.Name&#8221;</strong>
+        (@Model.StartTime.ToString("HH:mm") &ndash; @Model.EndTime.ToString("HH:mm")).
     </p>
+    <p style="font-size:14px;color:#5f6368;">Please choose one of the options below:</p>
 
-    <form asp-action="Replace" method="post" class="d-flex justify-content-end gap-2 mt-4">
-        <input type="hidden" name="oldAppId" value="@Model.Id" />
-        <!-- Các thuộc tính của newApp -->
-        <input type="hidden" name="Name" value="@newApp?.Name" />
-        <input type="hidden" name="Location" value="@newApp?.Location" />
-        <input type="hidden" name="StartTime" value="@newApp?.StartTime.ToString("O")" />
-        <input type="hidden" name="EndTime" value="@newApp?.EndTime.ToString("O")" />
+    <div class="d-flex justify-content-end gap-2 mt-4 flex-wrap">
 
-        <a href="/Appointment/Create" class="btn-outline">Chọn giờ khác</a>
-        <button type="submit" class="btn-google google-btn-danger">Ghi đè (Replace)</button>
-    </form>
+        @* ── Option A: Choose Other Time ──────────────────────────────────────── *@
+        @* Use Case: "choose an available time" – returns to form pre-filled *@
+        <form asp-action="ChooseOtherTime" method="post">
+            @Html.AntiForgeryToken()
+            @* Pass proposed appointment data back so the form is pre-filled *@
+            <input type="hidden" name="Id"        value="@proposed?.Id" />
+            <input type="hidden" name="Name"      value="@proposed?.Name" />
+            <input type="hidden" name="Location"  value="@proposed?.Location" />
+            <input type="hidden" name="StartTime" value="@proposed?.StartTime.ToString("O")" />
+            <input type="hidden" name="EndTime"   value="@proposed?.EndTime.ToString("O")" />
+            <button type="submit" class="btn-outline">
+                🕒 Choose Another Time
+            </button>
+        </form>
+
+        @* ── Option B: Replace ────────────────────────────────────────────────── *@
+        @* Use Case: "replace the previous appointment" *@
+        <form asp-action="Replace" method="post">
+            @Html.AntiForgeryToken()
+            @* ID of the conflicting appointment to delete *@
+            <input type="hidden" name="oldAppointmentId" value="@Model.Id" />
+            @* Data for the new appointment to save *@
+            <input type="hidden" name="Name"      value="@proposed?.Name" />
+            <input type="hidden" name="Location"  value="@proposed?.Location" />
+            <input type="hidden" name="StartTime" value="@proposed?.StartTime.ToString("O")" />
+            <input type="hidden" name="EndTime"   value="@proposed?.EndTime.ToString("O")" />
+            <button type="submit" class="btn-google google-btn-danger">
+                ⚠️ Replace Existing Appointment
+            </button>
+        </form>
+
+    </div>
 </div>

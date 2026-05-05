@@ -1,10 +1,9 @@
 @model IEnumerable<WebApplication15.Models.Appointment>
-@* Inject Service để lấy danh sách họp nhóm *@
 @inject WebApplication15.Services.AppointmentService _service
 
 @{
-    ViewData["Title"] = "Lịch biểu";
-    var groupMeetings = _service.GetAllGroupMeetings(); // Lấy dữ liệu từ Service (bao gồm dữ liệu Seed)
+    ViewData["Title"] = "My Calendar";
+    var groupMeetings = _service.GetAllGroupMeetings();
 }
 
 <style>
@@ -31,39 +30,88 @@
         padding: 12px 24px;
         border-bottom: 1px solid #e0e0e0;
         transition: background-color 0.2s;
-        align-items: center;
+        align-items: flex-start;
     }
     .schedule-row:hover { background-color: #f8f9fa; }
-    .time-col { width: 150px; color: #5f6368; font-size: 14px; font-weight: 500; }
-    .event-col { flex: 1; display: flex; align-items: center; }
-    .event-dot { width: 12px; height: 12px; border-radius: 50%; background-color: #039be5; margin-right: 12px; }
-    .dot-group { background-color: #34a853; } /* Màu xanh lá cho họp nhóm */
+    .time-col { width: 160px; color: #5f6368; font-size: 14px; font-weight: 500; flex-shrink: 0; }
+    .event-col { flex: 1; display: flex; align-items: flex-start; }
+    .event-dot { width: 12px; height: 12px; border-radius: 50%; background-color: #039be5; margin-right: 12px; margin-top: 4px; flex-shrink: 0; }
+    .dot-group { background-color: #34a853; }
     .event-details { display: flex; flex-direction: column; }
-    .event-title { font-size: 15px; color: #3c4043; font-weight: 500; margin-bottom: 2px; }
+    .event-title { font-size: 15px; color: #3c4043; font-weight: 500; margin-bottom: 4px; }
+    .reminder-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .reminder-tag {
+        font-size: 11px;
+        color: #1a73e8;
+        background: #e8f0fe;
+        border-radius: 10px;
+        padding: 2px 8px;
+    }
     .empty-state { padding: 40px; text-align: center; color: #5f6368; }
 </style>
 
+@* ── Toast notifications ── *@
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert"
+         style="border-radius:6px;margin-bottom:20px;">
+        ✅ @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert"
+         style="border-radius:6px;margin-bottom:20px;">
+        ❌ @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="mb-4">
-    <h2 style="font-family: 'Google Sans', sans-serif; font-size: 28px; color: #3c4043; font-weight: 400; margin: 0;">Lịch biểu của bạn</h2>
+    <h2 style="font-family:'Google Sans',sans-serif;font-size:28px;color:#3c4043;font-weight:400;margin:0;">
+        
+    </h2>
 </div>
 
-<!-- PHẦN 1: LỊCH CÁ NHÂN -->
+@* ── SECTION 1: Personal Appointments ── *@
 <div class="schedule-view">
-    <div class="schedule-header">LỊCH CÁ NHÂN</div>
-    
+    <div class="schedule-header">
+        PERSONAL APPOINTMENTS
+        <a asp-action="Create" class="btn btn-sm btn-primary" style="border-radius:20px;font-size:13px;">
+            + Add Appointment
+        </a>
+    </div>
+
     @if (Model != null && Model.Any())
     {
-        foreach (var appt in Model.OrderBy(a => a.StartTime))
+        foreach (var appt in Model)
         {
             <div class="schedule-row">
                 <div class="time-col">
                     <div>@appt.StartTime.ToString("dd/MM/yyyy")</div>
-                    <div style="font-size: 13px; color: #70757a;">@appt.StartTime.ToString("HH:mm") - @appt.EndTime.ToString("HH:mm")</div>
+                    <div style="font-size:13px;color:#70757a;">
+                        @appt.StartTime.ToString("HH:mm") &ndash; @appt.EndTime.ToString("HH:mm")
+                    </div>
                 </div>
                 <div class="event-col">
                     <div class="event-dot"></div>
                     <div class="event-details">
                         <div class="event-title">@appt.Name</div>
+                        @if (!string.IsNullOrWhiteSpace(appt.Location))
+                        {
+                            <div style="font-size:13px;color:#70757a;">📍 @appt.Location</div>
+                        }
+                        @* ── Display reminders (Use Case: "list of reminders") ── *@
+                        @if (appt.Reminders != null && appt.Reminders.Any())
+                        {
+                            <div class="reminder-tags">
+                                @foreach (var r in appt.Reminders)
+                                {
+                                    <span class="reminder-tag">🔔 @r.Label</span>
+                                }
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -71,14 +119,14 @@
     }
     else
     {
-        <div class="empty-state">Chưa có lịch cá nhân nào.</div>
+        <div class="empty-state">No personal appointments yet. Click "+ Add Appointment" to create one.</div>
     }
 </div>
 
-<!-- PHẦN 2: CUỘC HỌP NHÓM -->
+@* ── SECTION 2: Group Meetings ── *@
 <div class="schedule-view">
-    <div class="schedule-header" style="color: #1e8e3e;">CUỘC HỌP NHÓM</div>
-    
+    <div class="schedule-header" style="color:#1e8e3e;">GROUP MEETINGS</div>
+
     @if (groupMeetings != null && groupMeetings.Any())
     {
         foreach (var g in groupMeetings)
@@ -86,21 +134,31 @@
             <div class="schedule-row">
                 <div class="time-col">
                     <div>@g.StartTime.ToString("dd/MM/yyyy")</div>
-                    <div style="font-size: 13px; color: #70757a;">@g.StartTime.ToString("HH:mm") - @g.EndTime.ToString("HH:mm")</div>
+                    <div style="font-size:13px;color:#70757a;">
+                        @g.StartTime.ToString("HH:mm") &ndash; @g.EndTime.ToString("HH:mm")
+                    </div>
                 </div>
                 <div class="event-col">
                     <div class="event-dot dot-group"></div>
                     <div class="event-details">
                         <div class="event-title">@g.Name</div>
-                        <div style="font-size: 12px; color: #1e8e3e;">
-                             @(g.Participants?.Count ?? 0) người tham gia
+                        @if (!string.IsNullOrWhiteSpace(g.Location))
+                        {
+                            <div style="font-size:13px;color:#70757a;">📍 @g.Location</div>
+                        }
+                        <div style="font-size:12px;color:#1e8e3e;margin-top:4px;">
+                            👥 @(g.Participants?.Count ?? 0) participant(s)
                         </div>
                     </div>
                 </div>
                 <div>
                     <form asp-action="JoinGroup" method="post">
+                        @Html.AntiForgeryToken()
                         <input type="hidden" name="meetingId" value="@g.Id" />
-                        <button type="submit" class="btn btn-sm btn-outline-success" style="border-radius: 15px;">Tham gia</button>
+                        <button type="submit" class="btn btn-sm btn-outline-success"
+                                style="border-radius:15px;">
+                            Join
+                        </button>
                     </form>
                 </div>
             </div>
@@ -108,6 +166,6 @@
     }
     else
     {
-        <div class="empty-state">Không có cuộc họp nhóm nào.</div>
+        <div class="empty-state">No group meetings available.</div>
     }
-</div>a
+</div>
